@@ -178,7 +178,7 @@ The app will be available at `http://localhost:3000`. The bundled Postgres insta
 
 1. **Environment Variables**: Configure all AWS credentials
 2. **Database**: Set up a production PostgreSQL instance
-3. **AWS Services**: Configure S3, MediaConvert, CloudFront
+3. **AWS Services**: Configure S3, CloudFront
 4. **Security**: Update CORS and security settings
 5. **Monitoring**: Set up logging and monitoring
 

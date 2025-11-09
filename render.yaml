@@ -1,0 +1,37 @@
+databases:
+  - name: streaming-postgres
+    plan: starter
+    databaseName: social_platform
+    region: oregon
+    ipAllowList: []
+
+services:
+  - type: web
+    name: ultra-fast-social-platform
+    env: docker
+    plan: starter
+    region: oregon
+    autoDeploy: true
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: streaming-postgres
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      - key: RUN_DB_MIGRATIONS
+        value: "1"
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: S3_BUCKET_NAME
+        sync: false
+      - key: CLOUDFRONT_DOMAIN
+        sync: false
+      - key: JWT_SECRET
+        sync: false
