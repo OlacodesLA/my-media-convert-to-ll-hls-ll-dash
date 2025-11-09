@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int       @id @default(autoincrement())
+  username       String    @unique
+  email          String    @unique
+  passwordHash   String    @map("password_hash")
+  profileImageUrl String?  @map("profile_image_url")
+  bio            String?
+  followersCount Int       @default(0) @map("followers_count")
+  followingCount Int       @default(0) @map("following_count")
+  postsCount     Int       @default(0) @map("posts_count")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  posts          Post[]
+  comments       Comment[]
+  likes          Like[]
+  follows        Follow[]  @relation("follower")
+  following      Follow[]  @relation("following")
+
+  @@index([username], map: "idx_users_username")
+  @@index([email], map: "idx_users_email")
+  @@index([createdAt], map: "idx_users_created_at")
+  @@map("users")
+}
+
+model Post {
+  id                Int               @id @default(autoincrement())
+  userId            Int               @map("user_id")
+  caption           String?
+  mediaType         MediaType         @map("media_type")
+  originalMediaUrl  String?           @map("original_media_url")
+  thumbnailUrl      String?           @map("thumbnail_url")
+  dashManifestUrl   String?           @map("dash_manifest_url")
+  hlsPlaylistUrl    String?           @map("hls_playlist_url")
+  durationSeconds   Int?              @map("duration_seconds")
+  fileSizeBytes     BigInt?           @map("file_size_bytes")
+  resolution        String?
+  bitrateKbps       Int?              @map("bitrate_kbps")
+  likesCount        Int               @default(0) @map("likes_count")
+  commentsCount     Int               @default(0) @map("comments_count")
+  sharesCount       Int               @default(0) @map("shares_count")
+  viewsCount        Int               @default(0) @map("views_count")
+  processingStatus  ProcessingStatus  @default(uploading) @map("processing_status")
+  processingJobId   String?           @map("processing_job_id")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @default(now()) @updatedAt @map("updated_at")
+
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments          Comment[]
+  likes             Like[]
+  processingLogs    ProcessingLog[]
+
+  @@index([userId], map: "idx_posts_user_id")
+  @@index([mediaType], map: "idx_posts_media_type")
+  @@index([processingStatus], map: "idx_posts_processing_status")
+  @@index([createdAt], map: "idx_posts_created_at")
+  @@index([likesCount], map: "idx_posts_likes_count")
+  @@index([viewsCount], map: "idx_posts_views_count")
+  @@index([userId, createdAt], map: "idx_posts_user_created")
+  @@index([mediaType, createdAt], map: "idx_posts_media_type_created")
+  @@index([processingStatus, createdAt], map: "idx_posts_processing_created")
+  @@map("posts")
+}
+
+model Comment {
+  id               Int        @id @default(autoincrement())
+  postId           Int        @map("post_id")
+  userId           Int        @map("user_id")
+  content          String
+  parentCommentId  Int?       @map("parent_comment_id")
+  likesCount       Int        @default(0) @map("likes_count")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @default(now()) @updatedAt @map("updated_at")
+
+  post             Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentComment    Comment?   @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies          Comment[]  @relation("CommentReplies")
+  likes            Like[]
+
+  @@index([postId], map: "idx_comments_post_id")
+  @@index([userId], map: "idx_comments_user_id")
+  @@index([createdAt], map: "idx_comments_created_at")
+  @@map("comments")
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  postId    Int?     @map("post_id")
+  commentId Int?     @map("comment_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId], map: "unique_post_like")
+  @@unique([userId, commentId], map: "unique_comment_like")
+  @@index([userId], map: "idx_likes_user_id")
+  @@index([postId], map: "idx_likes_post_id")
+  @@index([commentId], map: "idx_likes_comment_id")
+  @@map("likes")
+}
+
+model Follow {
+  id           Int      @id @default(autoincrement())
+  followerId   Int      @map("follower_id")
+  followingId  Int      @map("following_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  follower     User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following    User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId], map: "unique_follow")
+  @@index([followerId], map: "idx_follows_follower_id")
+  @@index([followingId], map: "idx_follows_following_id")
+  @@map("follows")
+}
+
+model ProcessingLog {
+  id                   Int               @id @default(autoincrement())
+  postId               Int               @map("post_id")
+  processingType       ProcessingType    @map("processing_type")
+  status               ProcessingLogStatus @default(started)
+  inputFileUrl         String            @map("input_file_url")
+  outputUrls           Json?             @map("output_urls")
+  errorMessage         String?           @map("error_message")
+  processingTimeSeconds Int?             @map("processing_time_seconds")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @default(now()) @updatedAt @map("updated_at")
+
+  post                 Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId], map: "idx_processing_logs_post_id")
+  @@index([status], map: "idx_processing_logs_status")
+  @@index([processingType], map: "idx_processing_logs_processing_type")
+  @@map("processing_logs")
+}
+
+enum MediaType {
+  image
+  video
+}
+
+enum ProcessingStatus {
+  uploading
+  processing
+  ready
+  failed
+}
+
+enum ProcessingType {
+  video
+  image
+}
+
+enum ProcessingLogStatus {
+  started
+  completed
+  failed
+}
+

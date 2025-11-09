@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      # Override database URL so the app connects to the compose Postgres service
+      DATABASE_URL: postgresql://streaming_user:streaming_pass@postgres:5432/social_platform?schema=public
+      RUN_DB_MIGRATIONS: "1"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: social_platform
+      POSTGRES_USER: streaming_user
+      POSTGRES_PASSWORD: streaming_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
+
