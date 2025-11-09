@@ -1,7 +1,6 @@
 const express = require("express");
 const multer = require("multer");
 const AWS = require("aws-sdk");
-const { PrismaClient } = require("@prisma/client");
 const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
@@ -9,6 +8,20 @@ const morgan = require("morgan");
 const path = require("path");
 const FFmpegProcessor = require("./lib/ffmpeg-processor");
 require("dotenv").config();
+const { PrismaClient } = require("@prisma/client");
+
+const PLACEHOLDER_DATABASE_URL =
+  "postgresql://placeholder:placeholder@localhost:5432/placeholder?schema=public";
+
+if (!process.env.DATABASE_URL) {
+  console.warn(
+    "DATABASE_URL is not set. Using placeholder value so the application can start. Configure the real database URL to enable persistence."
+  );
+  process.env.DATABASE_URL = PLACEHOLDER_DATABASE_URL;
+}
+
+const databaseConfigured =
+  process.env.DATABASE_URL && process.env.DATABASE_URL !== PLACEHOLDER_DATABASE_URL;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -56,6 +69,19 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 // Serve static files
 app.use(express.static("public"));
+
+const ensureDatabaseConfigured = (req, res, next) => {
+  if (!databaseConfigured) {
+    return res.status(503).json({
+      success: false,
+      error:
+        "Database is not configured yet. Set the DATABASE_URL environment variable and redeploy.",
+    });
+  }
+  next();
+};
+
+app.use("/api", ensureDatabaseConfigured);
 
 // AWS Configuration
 AWS.config.update({
@@ -143,6 +169,12 @@ const toSnakeCasePost = (post) => {
 
 // Async processing functions
 async function processVideoAsync(postId, inputUrl, uniqueId) {
+  if (!databaseConfigured) {
+    console.warn(
+      "Skipping video post-processing database updates because DATABASE_URL is not configured."
+    );
+    return;
+  }
   try {
     console.log(`Starting FFmpeg processing for post ${postId}`);
 
@@ -177,6 +209,12 @@ async function processVideoAsync(postId, inputUrl, uniqueId) {
 }
 
 async function processImageAsync(postId, inputUrl, uniqueId) {
+  if (!databaseConfigured) {
+    console.warn(
+      "Skipping image post-processing database updates because DATABASE_URL is not configured."
+    );
+    return;
+  }
   try {
     console.log(`Starting image processing for post ${postId}`);
 
