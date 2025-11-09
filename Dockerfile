@@ -1,15 +1,19 @@
-FROM node:18-alpine AS base
+FROM node:18-bullseye-slim AS base
 
 ENV NODE_ENV=production
 WORKDIR /app
 
-# Install system dependencies needed for sharp
-RUN apk add --no-cache \
-    bash \
-    python3 \
-    make \
-    g++ \
-    libc6-compat
+# Install system dependencies needed for native modules (sharp, Prisma, etc.)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        openssl \
+        ca-certificates \
+        python3 \
+        make \
+        g++ \
+        bash \
+        git \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
 COPY package.json package-lock.json* ./

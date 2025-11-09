@@ -21,7 +21,8 @@ if (!process.env.DATABASE_URL) {
 }
 
 const databaseConfigured =
-  process.env.DATABASE_URL && process.env.DATABASE_URL !== PLACEHOLDER_DATABASE_URL;
+  process.env.DATABASE_URL &&
+  process.env.DATABASE_URL !== PLACEHOLDER_DATABASE_URL;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
